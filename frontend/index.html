@@ -3,130 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Tool-Calling Studio</title>
-    <!-- Google Fonts -->
+    <title>AI Agent Assistant</title>
+    <!-- Google Fonts: Inter & Fira Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Highlight.js Syntax Highlighting Theme -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Highlight.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <!-- Main CSS -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="app-layout">
-        <!-- Collapsible Sidebar -->
+        <!-- Sidebar -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <button id="newChatBtn" class="btn-primary-gradient">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>New Chat</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>New Conversation</span>
                 </button>
                 <button id="sidebarCloseBtn" class="icon-btn mobile-only" aria-label="Close sidebar">✕</button>
             </div>
 
-            <!-- Chat Sessions List -->
+            <!-- Recent Sessions -->
             <div class="sidebar-section">
-                <span class="sidebar-section-title">Recent Conversations</span>
+                <span class="sidebar-section-title">Saved Conversations</span>
                 <div id="sessionList" class="session-list">
-                    <!-- Dynamically populated -->
+                    <!-- Dynamic session list -->
                 </div>
             </div>
 
-            <!-- Agent Tools Capabilities -->
+            <!-- Capabilities Card -->
             <div class="sidebar-card">
-                <div class="sidebar-card-title">⚡ Available Tools</div>
+                <div class="sidebar-card-title">Enabled Integrations</div>
                 <div class="tool-item">
-                    <span class="tool-icon">🧮</span>
+                    <span class="tool-icon">📊</span>
                     <div class="tool-info">
-                        <strong>Calculator</strong>
-                        <small>AST Math evaluator (+, -, *, /, **)</small>
+                        <strong>Calculator Tool</strong>
+                        <small>Mathematical computation engine</small>
                     </div>
                 </div>
                 <div class="tool-item">
-                    <span class="tool-icon">📚</span>
+                    <span class="tool-icon">📁</span>
                     <div class="tool-info">
-                        <strong>RAG Knowledge Base</strong>
-                        <small>FAISS + MiniLM vector search</small>
+                        <strong>Knowledge Base (RAG)</strong>
+                        <small>FAISS semantic search</small>
                     </div>
                 </div>
             </div>
 
-            <!-- Sidebar Footer -->
+            <!-- Footer -->
             <div class="sidebar-footer">
                 <div class="model-badge">
                     <span class="pulse-dot"></span>
-                    <span>Qwen2.5 / Llama3 (HF)</span>
+                    <span>Backend Active (Qwen / Llama)</span>
                 </div>
             </div>
         </aside>
 
         <!-- Main Workspace -->
         <main class="main-content">
-            <!-- Header Bar -->
+            <!-- Top Navigation Header -->
             <header class="app-header">
                 <div class="header-left">
-                    <button id="sidebarToggleBtn" class="icon-btn" title="Toggle Sidebar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    <button id="sidebarToggleBtn" class="icon-btn" title="Toggle Navigation Sidebar">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <div class="brand">
-                        <div class="brand-icon">🤖</div>
+                        <div class="brand-icon">💼</div>
                         <div class="brand-text">
-                            <h1>AI Agent Studio</h1>
-                            <p>LangGraph Stateful Workflow</p>
+                            <h1>AI Agent Console</h1>
+                            <p>LangGraph Agent Orchestration</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Live Execution Telemetry Flow -->
+                <!-- Execution Pipeline Breadcrumbs -->
                 <div id="flowPipeline" class="flow-pipeline">
                     <div class="flow-step step-user active" id="stepUser">
-                        <span class="step-icon">👤</span>
-                        <span class="step-name">Input</span>
+                        <span class="step-name">1. Input</span>
                     </div>
                     <div class="flow-connector" id="conn1"></div>
                     <div class="flow-step step-agent" id="stepAgent">
-                        <span class="step-icon">🧠</span>
-                        <span class="step-name">Agent</span>
+                        <span class="step-name">2. Agent</span>
                     </div>
                     <div class="flow-connector" id="conn2"></div>
                     <div class="flow-step step-tool" id="stepTool">
-                        <span class="step-icon">🛠️</span>
-                        <span class="step-name">Tool</span>
+                        <span class="step-name">3. Tool</span>
                     </div>
                     <div class="flow-connector" id="conn3"></div>
                     <div class="flow-step step-response" id="stepResponse">
-                        <span class="step-icon">💬</span>
-                        <span class="step-name">Output</span>
+                        <span class="step-name">4. Output</span>
                     </div>
                 </div>
 
                 <div class="header-right">
-                    <button id="clearChatBtn" class="btn-secondary" title="Clear current conversation">Clear Chat</button>
+                    <button id="clearChatBtn" class="btn-secondary" title="Clear conversation history">Clear History</button>
                 </div>
             </header>
 
-            <!-- Chat Transcript -->
+            <!-- Chat Container -->
             <div id="chatContainer" class="chat-container">
                 <!-- Messages appended dynamically -->
             </div>
 
-            <!-- Quick Query Suggestions -->
+            <!-- Suggestion Chips -->
             <div class="quick-prompts">
                 <button class="chip" data-query="Calculate 125 * 37">🔢 125 * 37</button>
                 <button class="chip" data-query="What are the working hours?">⏰ Working Hours</button>
                 <button class="chip" data-query="What technologies does the project use?">💻 Tech Stack</button>
-                <button class="chip" data-query="Write a python function for Fibonacci sequence">🐍 Fibonacci Code</button>
-                <button class="chip" data-query="What is machine learning?">🧠 ML Overview</button>
+                <button class="chip" data-query="What is machine learning?">🧠 Machine Learning</button>
             </div>
 
-            <!-- Input Area -->
+            <!-- Input Controls -->
             <footer class="input-container">
                 <form id="chatForm" class="input-form">
-                    <input type="text" id="userInput" class="chat-input" placeholder="Ask a question or request a calculation..." autocomplete="off" required>
+                    <input type="text" id="userInput" class="chat-input" placeholder="Type a message or calculation request..." autocomplete="off" required>
                     <button type="submit" id="sendBtn" class="send-btn">
                         <span>Send</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </form>
             </footer>
@@ -136,7 +131,6 @@
     <!-- Highlight.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
     <!-- Application JavaScript -->
     <script src="/static/app.js"></script>
 </body>
