@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Tool-Calling Assistant</title>
+    <title>AI Agent Studio - Tool Calling & RAG</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,58 +11,127 @@
     <!-- Main CSS -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="brand">
-                <div class="brand-icon">🤖</div>
-                <div class="brand-text">
-                    <h1>AI Agent Studio</h1>
-                    <p>LangGraph • LangChain • RAG • Tool Calling</p>
-                </div>
+<body data-theme="cyber">
+    <div class="app-wrapper">
+        <!-- Sidebar Dashboard -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Agent Tools Hub</span>
             </div>
-            <div class="header-actions">
-                <div class="status-badge">
-                    <span class="status-dot"></span>
-                    <span>Agent Ready</span>
-                </div>
-                <button id="clearBtn" class="btn-secondary">Clear Chat</button>
-            </div>
-        </header>
 
-        <!-- Chat Transcript -->
-        <main id="chatContainer" class="chat-container">
-            <!-- Initial Welcome Message -->
-            <div class="message-row assistant">
-                <span class="sender-label">AI Assistant</span>
-                <div class="message-bubble">
-                    Hello! I'm your AI Tool-Calling Assistant. I can answer questions directly, run mathematical calculations, or retrieve information from the company knowledge base.
+            <!-- Active Tools Status -->
+            <div class="sidebar-section">
+                <h3>Active Tools (2)</h3>
+                <div class="tool-status-item">
+                    <div class="tool-info">
+                        <span>🧮</span>
+                        <span>Calculator</span>
+                    </div>
+                    <span class="tool-badge active">AST Eval</span>
+                </div>
+                <div class="tool-status-item">
+                    <div class="tool-info">
+                        <span>📚</span>
+                        <span>Knowledge Base</span>
+                    </div>
+                    <span class="tool-badge active">FAISS RAG</span>
                 </div>
             </div>
-        </main>
 
-        <!-- Quick Query Chips -->
-        <div class="quick-prompts">
-            <button class="chip" data-query="Calculate 125 * 37">🔢 Calculate 125 * 37</button>
-            <button class="chip" data-query="What are the working hours?">⏰ What are the working hours?</button>
-            <button class="chip" data-query="What technologies does the project use?">💻 Project technology stack</button>
-            <button class="chip" data-query="What is machine learning?">🧠 What is machine learning?</button>
+            <!-- Session Metrics -->
+            <div class="sidebar-section">
+                <h3>Session Analytics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div id="queryCount" class="metric-value">0</div>
+                        <div class="metric-label">Queries</div>
+                    </div>
+                    <div class="metric-card">
+                        <div id="toolCount" class="metric-value">0</div>
+                        <div class="metric-label">Tool Calls</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Picker -->
+            <div class="sidebar-section">
+                <h3>Theme Preset</h3>
+                <select id="themeSelect" class="theme-select">
+                    <option value="cyber">Cyber Neon (Indigo)</option>
+                    <option value="emerald">Emerald Matrix (Green)</option>
+                    <option value="sunset">Sunset Flare (Amber)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Main Application Area -->
+        <div class="main-content">
+            <!-- App Header -->
+            <header class="app-header">
+                <div class="brand">
+                    <button id="toggleSidebar" class="sidebar-toggle-btn" title="Toggle Sidebar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <div class="brand-icon">🤖</div>
+                    <div class="brand-text">
+                        <h1>AI Agent Studio</h1>
+                        <p>LangGraph • LangChain • HuggingFace • RAG</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="exportBtn" class="btn-secondary" title="Export Chat Markdown">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Export</span>
+                    </button>
+                    <button id="clearBtn" class="btn-secondary" title="Clear Conversation">
+                        <span>Clear</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Transcript -->
+            <main id="chatContainer" class="chat-container">
+                <!-- Welcome Message -->
+                <div class="message-row assistant">
+                    <div class="message-header">
+                        <span class="sender-label">AI Assistant</span>
+                    </div>
+                    <div class="message-bubble">
+                        Hello! I'm your AI Tool-Calling Assistant powered by LangGraph. Ask me a question directly, or request math computations or company policy information!
+                    </div>
+                </div>
+            </main>
+
+            <!-- Quick Query Chips -->
+            <div class="quick-prompts">
+                <button class="chip" data-query="Calculate 125 * 37">🔢 Calculate 125 * 37</button>
+                <button class="chip" data-query="What are the working hours?">⏰ What are the working hours?</button>
+                <button class="chip" data-query="What technologies does the project use?">💻 Project tech stack</button>
+                <button class="chip" data-query="What is machine learning?">🧠 What is machine learning?</button>
+            </div>
+
+            <!-- Input Area -->
+            <footer class="input-container">
+                <form id="chatForm" class="input-form">
+                    <input type="text" id="userInput" class="chat-input" placeholder="Ask a question or request a tool action..." autocomplete="off" required>
+                    <button type="submit" id="sendBtn" class="send-btn">
+                        <span>Send</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </footer>
         </div>
-
-        <!-- Input Area -->
-        <footer class="input-container">
-            <form id="chatForm" class="input-form">
-                <input type="text" id="userInput" class="chat-input" placeholder="Ask a question or request a calculation..." autocomplete="off" required>
-                <button type="submit" id="sendBtn" class="send-btn">
-                    <span>Send</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
-            </form>
-        </footer>
     </div>
 
     <!-- Application JavaScript -->

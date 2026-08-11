@@ -4,32 +4,79 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const sidebar = document.getElementById('sidebar');
+    const themeSelect = document.getElementById('themeSelect');
+    const queryCountEl = document.getElementById('queryCount');
+    const toolCountEl = document.getElementById('toolCount');
     const chips = document.querySelectorAll('.chip');
 
-    // In-memory conversation state
+    // State
     let messages = [];
+    let queryCount = 0;
+    let toolCount = 0;
 
-    // Scroll chat to bottom
+    // Theme Picker
+    const savedTheme = localStorage.getItem('agent_theme') || 'cyber';
+    document.body.setAttribute('data-theme', savedTheme);
+    themeSelect.value = savedTheme;
+
+    themeSelect.addEventListener('change', (e) => {
+        const theme = e.target.value;
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('agent_theme', theme);
+    });
+
+    // Sidebar Toggle
+    toggleSidebar.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    // Scroll to bottom
     function scrollToBottom() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Render single message object
-    function renderMessage(msg) {
+    // Escape HTML helper
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Format content markdown
+    function formatContent(content) {
+        return escapeHtml(content)
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">$1</code>');
+    }
+
+    // Render single message
+    function renderMessage(msg, animate = false) {
         const row = document.createElement('div');
         row.className = `message-row ${msg.role}`;
 
         if (msg.role === 'user') {
             row.innerHTML = `
-                <span class="sender-label">You</span>
+                <div class="message-header">
+                    <span class="sender-label">You</span>
+                </div>
                 <div class="message-bubble">${escapeHtml(msg.content)}</div>
             `;
         } else if (msg.role === 'assistant') {
-            let html = '<span class="sender-label">AI Assistant</span>';
+            let html = `
+                <div class="message-header">
+                    <span class="sender-label">AI Assistant</span>
+                    <button class="copy-btn" title="Copy message">Copy</button>
+                </div>
+            `;
             
-            // Check if tool calls exist
             if (msg.tool_calls && msg.tool_calls.length > 0) {
                 msg.tool_calls.forEach(tc => {
+                    toolCount++;
+                    toolCountEl.textContent = toolCount;
                     html += `
                         <div class="tool-call-pill">
                             <span>🔧</span>
@@ -44,29 +91,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             row.innerHTML = html;
+
+            // Bind copy button
+            const copyBtn = row.querySelector('.copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(msg.content || '');
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+                });
+            }
         } else if (msg.role === 'tool') {
             row.innerHTML = `
-                <div class="tool-result-card">
-                    <div class="tool-result-header">
-                        <span>🛠️ Tool Execution Output</span>
-                        <span>${escapeHtml(msg.name)}</span>
+                <div class="tool-accordion">
+                    <div class="tool-accordion-header">
+                        <span>🛠️ Tool Execution Output (${escapeHtml(msg.name)})</span>
+                        <span>▼</span>
                     </div>
-                    <div>${escapeHtml(msg.content)}</div>
+                    <div class="tool-accordion-body">${escapeHtml(msg.content)}</div>
                 </div>
             `;
+
+            // Toggle accordion
+            const header = row.querySelector('.tool-accordion-header');
+            const body = row.querySelector('.tool-accordion-body');
+            header.addEventListener('click', () => {
+                const isOpen = body.style.display !== 'none';
+                body.style.display = isOpen ? 'none' : 'block';
+                header.querySelector('span:last-child').textContent = isOpen ? '▶' : '▼';
+            });
         }
 
         chatContainer.appendChild(row);
         scrollToBottom();
     }
 
-    // Show loading spinner
+    // Loading indicator
     function showLoading() {
         const row = document.createElement('div');
         row.className = 'message-row assistant';
         row.id = 'loadingIndicator';
         row.innerHTML = `
-            <span class="sender-label">AI Assistant</span>
+            <div class="message-header">
+                <span class="sender-label">AI Assistant</span>
+            </div>
             <div class="loading-dots">
                 <div class="dot"></div>
                 <div class="dot"></div>
@@ -77,29 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
-    // Remove loading spinner
     function hideLoading() {
         const indicator = document.getElementById('loadingIndicator');
-        if (indicator) {
-            indicator.remove();
-        }
+        if (indicator) indicator.remove();
     }
 
-    // Helper functions
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    function formatContent(content) {
-        // Simple markdown line breaks & bold formatting
-        return escapeHtml(content)
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    }
-
-    // Send query to backend
+    // Handle user query submission
     async function handleSend(queryText) {
         const text = queryText || userInput.value.trim();
         if (!text) return;
@@ -108,7 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.disabled = true;
         sendBtn.disabled = true;
 
-        // Add user message to state
+        queryCount++;
+        queryCountEl.textContent = queryCount;
+
         const userMsg = { role: 'user', content: text };
         messages.push(userMsg);
         renderMessage(userMsg);
@@ -130,12 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLoading();
 
             if (data.messages && data.messages.length > 0) {
-                // Update messages state and render newly received messages
                 const previousCount = messages.length;
                 messages = data.messages;
 
                 for (let i = previousCount; i < messages.length; i++) {
-                    renderMessage(messages[i]);
+                    renderMessage(messages[i], true);
                 }
             }
         } catch (err) {
@@ -151,30 +203,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Event listeners
+    // Form submission
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         handleSend();
     });
 
+    // Prompt chips
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
             const query = chip.getAttribute('data-query');
-            if (query) {
-                handleSend(query);
-            }
+            if (query) handleSend(query);
         });
     });
 
+    // Clear chat
     clearBtn.addEventListener('click', () => {
         messages = [];
+        queryCount = 0;
+        toolCount = 0;
+        queryCountEl.textContent = '0';
+        toolCountEl.textContent = '0';
         chatContainer.innerHTML = `
             <div class="message-row assistant">
-                <span class="sender-label">AI Assistant</span>
+                <div class="message-header">
+                    <span class="sender-label">AI Assistant</span>
+                </div>
                 <div class="message-bubble">
-                    Conversation cleared! How can I assist you now?
+                    Conversation reset. How can I help you next?
                 </div>
             </div>
         `;
+    });
+
+    // Export Chat Markdown
+    exportBtn.addEventListener('click', () => {
+        if (messages.length === 0) return;
+        let markdown = `# AI Agent Studio - Chat Transcript\n\n`;
+        messages.forEach(m => {
+            markdown += `### ${m.role.toUpperCase()}\n${m.content || ''}\n\n`;
+        });
+        const blob = new Blob([markdown], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat-transcript-${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
     });
 });
