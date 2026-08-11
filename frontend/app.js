@@ -1,140 +1,272 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const sessionList = document.getElementById('sessionList');
+    const clearChatBtn = document.getElementById('clearChatBtn');
     const chatContainer = document.getElementById('chatContainer');
     const chatForm = document.getElementById('chatForm');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const toggleSidebar = document.getElementById('toggleSidebar');
-    const sidebar = document.getElementById('sidebar');
-    const themeSelect = document.getElementById('themeSelect');
-    const queryCountEl = document.getElementById('queryCount');
-    const toolCountEl = document.getElementById('toolCount');
     const chips = document.querySelectorAll('.chip');
 
-    // State
-    let messages = [];
-    let queryCount = 0;
-    let toolCount = 0;
+    // Telemetry Steps
+    const stepUser = document.getElementById('stepUser');
+    const stepAgent = document.getElementById('stepAgent');
+    const stepTool = document.getElementById('stepTool');
+    const stepResponse = document.getElementById('stepResponse');
+    const conn1 = document.getElementById('conn1');
+    const conn2 = document.getElementById('conn2');
+    const conn3 = document.getElementById('conn3');
 
-    // Theme Picker
-    const savedTheme = localStorage.getItem('agent_theme') || 'cyber';
-    document.body.setAttribute('data-theme', savedTheme);
-    themeSelect.value = savedTheme;
+    // App State: LocalStorage Sessions Management
+    const STORAGE_KEY = 'ai_agent_sessions_v1';
+    let sessions = loadSessions();
+    let currentSessionId = sessions.length > 0 ? sessions[0].id : createNewSession();
 
-    themeSelect.addEventListener('change', (e) => {
-        const theme = e.target.value;
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('agent_theme', theme);
-    });
+    // Initialize App UI
+    renderSessionList();
+    loadCurrentSessionChat();
 
-    // Sidebar Toggle
-    toggleSidebar.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
+    // -------------------------------------------------------------
+    // Session Management Functions
+    // -------------------------------------------------------------
+    function loadSessions() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
 
-    // Scroll to bottom
+    function saveSessions() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        } catch (e) {
+            console.error('Failed to save sessions:', e);
+        }
+    }
+
+    function getCurrentSession() {
+        let session = sessions.find(s => s.id === currentSessionId);
+        if (!session) {
+            currentSessionId = createNewSession();
+            session = sessions.find(s => s.id === currentSessionId);
+        }
+        return session;
+    }
+
+    function createNewSession() {
+        const id = 'sess_' + Date.now();
+        const newSession = {
+            id,
+            title: 'New Conversation',
+            messages: [
+                {
+                    role: 'assistant',
+                    content: "Hello! I'm your AI Tool-Calling Assistant. Ask me anything, or give me a calculation / knowledge base question!"
+                }
+            ]
+        };
+        sessions.unshift(newSession);
+        saveSessions();
+        currentSessionId = id;
+        renderSessionList();
+        loadCurrentSessionChat();
+        return id;
+    }
+
+    function renderSessionList() {
+        sessionList.innerHTML = '';
+        sessions.forEach(sess => {
+            const div = document.createElement('div');
+            div.className = `session-item ${sess.id === currentSessionId ? 'active' : ''}`;
+            div.innerHTML = `
+                <span class="session-title">${escapeHtml(sess.title)}</span>
+                <button class="delete-session-btn" title="Delete Session">✕</button>
+            `;
+
+            div.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-session-btn')) {
+                    e.stopPropagation();
+                    deleteSession(sess.id);
+                } else {
+                    currentSessionId = sess.id;
+                    renderSessionList();
+                    loadCurrentSessionChat();
+                }
+            });
+
+            sessionList.appendChild(div);
+        });
+    }
+
+    function deleteSession(id) {
+        sessions = sessions.filter(s => s.id !== id);
+        if (sessions.length === 0) {
+            createNewSession();
+        } else {
+            if (currentSessionId === id) {
+                currentSessionId = sessions[0].id;
+            }
+            saveSessions();
+            renderSessionList();
+            loadCurrentSessionChat();
+        }
+    }
+
+    function updateSessionTitle(firstQuery) {
+        const session = getCurrentSession();
+        if (session && (session.title === 'New Conversation' || !session.title)) {
+            session.title = firstQuery.slice(0, 30) + (firstQuery.length > 30 ? '...' : '');
+            saveSessions();
+            renderSessionList();
+        }
+    }
+
+    function loadCurrentSessionChat() {
+        chatContainer.innerHTML = '';
+        const session = getCurrentSession();
+        if (session && session.messages) {
+            session.messages.forEach(msg => renderMessage(msg));
+        }
+        resetTelemetryFlow();
+    }
+
+    // -------------------------------------------------------------
+    // Telemetry Pipeline Flow Controller
+    // -------------------------------------------------------------
+    function resetTelemetryFlow() {
+        stepUser.className = 'flow-step step-user active';
+        stepAgent.className = 'flow-step step-agent';
+        stepTool.className = 'flow-step step-tool';
+        stepResponse.className = 'flow-step step-response';
+        conn1.className = 'flow-connector';
+        conn2.className = 'flow-connector';
+        conn3.className = 'flow-connector';
+    }
+
+    function updateTelemetryFlow(phase) {
+        resetTelemetryFlow();
+        if (phase === 'input') {
+            stepUser.classList.add('active');
+        } else if (phase === 'agent') {
+            stepUser.classList.add('active');
+            conn1.classList.add('active');
+            stepAgent.classList.add('active');
+        } else if (phase === 'tool') {
+            stepUser.classList.add('active');
+            conn1.classList.add('active');
+            stepAgent.classList.add('active');
+            conn2.classList.add('active');
+            stepTool.classList.add('active');
+        } else if (phase === 'response') {
+            stepUser.classList.add('active');
+            conn1.classList.add('active');
+            stepAgent.classList.add('active');
+            conn2.classList.add('active');
+            stepTool.classList.add('active');
+            conn3.classList.add('active');
+            stepResponse.classList.add('active');
+        }
+    }
+
+    // -------------------------------------------------------------
+    // Formatting & Rendering
+    // -------------------------------------------------------------
     function scrollToBottom() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Escape HTML helper
     function escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    // Format content markdown
-    function formatContent(content) {
-        return escapeHtml(content)
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">$1</code>');
+    function parseMarkdown(text) {
+        if (!text) return '';
+        
+        // 1. Code blocks ```lang\ncode\n```
+        let formatted = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const cleanLang = lang.trim() || 'plaintext';
+            return `<pre><button class="copy-code-btn" onclick="copyCode(this)">Copy</button><code class="language-${cleanLang}">${escapeHtml(code.trim())}</code></pre>`;
+        });
+
+        // 2. Inline code `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+        // 3. Bold **text**
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // 4. Line breaks
+        formatted = formatted.replace(/\n/g, '<br>');
+
+        return formatted;
     }
 
-    // Render single message
-    function renderMessage(msg, animate = false) {
+    function renderMessage(msg) {
         const row = document.createElement('div');
         row.className = `message-row ${msg.role}`;
 
         if (msg.role === 'user') {
             row.innerHTML = `
-                <div class="message-header">
-                    <span class="sender-label">You</span>
-                </div>
+                <span class="sender-label">You</span>
                 <div class="message-bubble">${escapeHtml(msg.content)}</div>
             `;
         } else if (msg.role === 'assistant') {
-            let html = `
-                <div class="message-header">
-                    <span class="sender-label">AI Assistant</span>
-                    <button class="copy-btn" title="Copy message">Copy</button>
-                </div>
-            `;
+            let html = '<span class="sender-label">AI Assistant</span>';
             
             if (msg.tool_calls && msg.tool_calls.length > 0) {
                 msg.tool_calls.forEach(tc => {
-                    toolCount++;
-                    toolCountEl.textContent = toolCount;
                     html += `
                         <div class="tool-call-pill">
                             <span>🔧</span>
-                            <span>Executing tool <strong>${escapeHtml(tc.name)}</strong>...</span>
+                            <span>Executing tool: <strong>${escapeHtml(tc.name)}</strong></span>
                         </div>
                     `;
                 });
             }
 
             if (msg.content) {
-                html += `<div class="message-bubble">${formatContent(msg.content)}</div>`;
+                html += `<div class="message-bubble">${parseMarkdown(msg.content)}</div>`;
             }
 
             row.innerHTML = html;
-
-            // Bind copy button
-            const copyBtn = row.querySelector('.copy-btn');
-            if (copyBtn) {
-                copyBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(msg.content || '');
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
-                });
-            }
         } else if (msg.role === 'tool') {
             row.innerHTML = `
-                <div class="tool-accordion">
-                    <div class="tool-accordion-header">
-                        <span>🛠️ Tool Execution Output (${escapeHtml(msg.name)})</span>
-                        <span>▼</span>
+                <div class="tool-result-card">
+                    <div class="tool-result-header">
+                        <span>🛠️ Execution Result</span>
+                        <span>${escapeHtml(msg.name)}</span>
                     </div>
-                    <div class="tool-accordion-body">${escapeHtml(msg.content)}</div>
+                    <div>${escapeHtml(msg.content)}</div>
                 </div>
             `;
-
-            // Toggle accordion
-            const header = row.querySelector('.tool-accordion-header');
-            const body = row.querySelector('.tool-accordion-body');
-            header.addEventListener('click', () => {
-                const isOpen = body.style.display !== 'none';
-                body.style.display = isOpen ? 'none' : 'block';
-                header.querySelector('span:last-child').textContent = isOpen ? '▶' : '▼';
-            });
         }
 
         chatContainer.appendChild(row);
+        
+        // Trigger Highlight.js on code blocks
+        row.querySelectorAll('pre code').forEach((block) => {
+            if (window.hljs) {
+                window.hljs.highlightElement(block);
+            }
+        });
+
         scrollToBottom();
     }
 
-    // Loading indicator
     function showLoading() {
         const row = document.createElement('div');
         row.className = 'message-row assistant';
         row.id = 'loadingIndicator';
         row.innerHTML = `
-            <div class="message-header">
-                <span class="sender-label">AI Assistant</span>
-            </div>
+            <span class="sender-label">AI Assistant</span>
             <div class="loading-dots">
                 <div class="dot"></div>
                 <div class="dot"></div>
@@ -150,7 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (indicator) indicator.remove();
     }
 
-    // Handle user query submission
+    // -------------------------------------------------------------
+    // Chat Submission Logic
+    // -------------------------------------------------------------
     async function handleSend(queryText) {
         const text = queryText || userInput.value.trim();
         if (!text) return;
@@ -159,43 +293,58 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.disabled = true;
         sendBtn.disabled = true;
 
-        queryCount++;
-        queryCountEl.textContent = queryCount;
+        const session = getCurrentSession();
+        updateSessionTitle(text);
 
+        // Add user message
         const userMsg = { role: 'user', content: text };
-        messages.push(userMsg);
+        session.messages.push(userMsg);
+        saveSessions();
         renderMessage(userMsg);
 
+        updateTelemetryFlow('agent');
         showLoading();
 
         try {
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages })
+                body: JSON.stringify({ messages: session.messages })
             });
 
-            if (!response.ok) {
-                throw new Error(`Server returned status ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Status ${response.status}`);
 
             const data = await response.json();
             hideLoading();
 
             if (data.messages && data.messages.length > 0) {
-                const previousCount = messages.length;
-                messages = data.messages;
+                const prevCount = session.messages.length;
+                session.messages = data.messages;
+                saveSessions();
 
-                for (let i = previousCount; i < messages.length; i++) {
-                    renderMessage(messages[i], true);
+                let executedTool = false;
+                for (let i = prevCount; i < session.messages.length; i++) {
+                    const m = session.messages[i];
+                    if (m.role === 'tool' || (m.tool_calls && m.tool_calls.length > 0)) {
+                        executedTool = true;
+                    }
+                    renderMessage(m);
+                }
+
+                if (executedTool) {
+                    updateTelemetryFlow('tool');
+                    setTimeout(() => updateTelemetryFlow('response'), 800);
+                } else {
+                    updateTelemetryFlow('response');
                 }
             }
         } catch (err) {
             hideLoading();
             renderMessage({
                 role: 'assistant',
-                content: `⚠️ Error communicating with server: ${err.message}`
+                content: `⚠️ Error connecting to server: ${err.message}`
             });
+            updateTelemetryFlow('input');
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;
@@ -203,13 +352,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Form submission
+    // Copy Code Helper
+    window.copyCode = function(button) {
+        const pre = button.parentElement;
+        const code = pre.querySelector('code');
+        if (code) {
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => button.textContent = 'Copy', 2000);
+            });
+        }
+    };
+
+    // -------------------------------------------------------------
+    // Event Listeners
+    // -------------------------------------------------------------
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         handleSend();
     });
 
-    // Prompt chips
     chips.forEach(chip => {
         chip.addEventListener('click', () => {
             const query = chip.getAttribute('data-query');
@@ -217,38 +379,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Clear chat
-    clearBtn.addEventListener('click', () => {
-        messages = [];
-        queryCount = 0;
-        toolCount = 0;
-        queryCountEl.textContent = '0';
-        toolCountEl.textContent = '0';
-        chatContainer.innerHTML = `
-            <div class="message-row assistant">
-                <div class="message-header">
-                    <span class="sender-label">AI Assistant</span>
-                </div>
-                <div class="message-bubble">
-                    Conversation reset. How can I help you next?
-                </div>
-            </div>
-        `;
+    newChatBtn.addEventListener('click', () => {
+        createNewSession();
     });
 
-    // Export Chat Markdown
-    exportBtn.addEventListener('click', () => {
-        if (messages.length === 0) return;
-        let markdown = `# AI Agent Studio - Chat Transcript\n\n`;
-        messages.forEach(m => {
-            markdown += `### ${m.role.toUpperCase()}\n${m.content || ''}\n\n`;
-        });
-        const blob = new Blob([markdown], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `chat-transcript-${Date.now()}.md`;
-        a.click();
-        URL.revokeObjectURL(url);
+    clearChatBtn.addEventListener('click', () => {
+        const session = getCurrentSession();
+        if (session) {
+            session.messages = [
+                {
+                    role: 'assistant',
+                    content: "Conversation reset! What would you like to explore next?"
+                }
+            ];
+            saveSessions();
+            loadCurrentSessionChat();
+        }
     });
+
+    sidebarToggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener('click', () => {
+            sidebar.classList.add('collapsed');
+        });
+    }
 });
