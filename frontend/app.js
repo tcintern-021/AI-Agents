@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('sendBtn');
     const chips = document.querySelectorAll('.chip');
 
-    // Telemetry Steps
+    // Telemetry Steps (Optional)
     const stepUser = document.getElementById('stepUser');
     const stepAgent = document.getElementById('stepAgent');
     const stepTool = document.getElementById('stepTool');
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messages: [
                 {
                     role: 'assistant',
-                    content: "Hello! I'm your AI Tool-Calling Assistant. Ask me anything, or give me a calculation / knowledge base question!"
+                    content: "Hello! I'm your AI Agent Assistant. Ask me anything, or request a calculation / knowledge base lookup!"
                 }
             ]
         };
@@ -137,9 +137,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // -------------------------------------------------------------
-    // Telemetry Pipeline Flow Controller
+    // Telemetry Pipeline Flow Controller (Safely handles missing elements)
     // -------------------------------------------------------------
     function resetTelemetryFlow() {
+        if (!stepUser) return;
         stepUser.className = 'flow-step step-user active';
         stepAgent.className = 'flow-step step-agent';
         stepTool.className = 'flow-step step-tool';
@@ -150,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTelemetryFlow(phase) {
+        if (!stepUser) return;
         resetTelemetryFlow();
         if (phase === 'input') {
             stepUser.classList.add('active');
@@ -191,19 +193,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function parseMarkdown(text) {
         if (!text) return '';
         
-        // 1. Code blocks ```lang\ncode\n```
+        // Code blocks ```lang\ncode\n```
         let formatted = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const cleanLang = lang.trim() || 'plaintext';
             return `<pre><button class="copy-code-btn" onclick="copyCode(this)">Copy</button><code class="language-${cleanLang}">${escapeHtml(code.trim())}</code></pre>`;
         });
 
-        // 2. Inline code `code`
+        // Inline code `code`
         formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
-        // 3. Bold **text**
+        // Bold **text**
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-        // 4. Line breaks
+        // Line breaks
         formatted = formatted.replace(/\n/g, '<br>');
 
         return formatted;
@@ -225,8 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 msg.tool_calls.forEach(tc => {
                     html += `
                         <div class="tool-call-pill">
-                            <span>🔧</span>
-                            <span>Executing tool: <strong>${escapeHtml(tc.name)}</strong></span>
+                            <span>⚙️</span>
+                            <span>Executing Tool: <strong>${escapeHtml(tc.name)}</strong></span>
                         </div>
                     `;
                 });
@@ -241,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             row.innerHTML = `
                 <div class="tool-result-card">
                     <div class="tool-result-header">
-                        <span>🛠️ Execution Result</span>
+                        <span>⚙️ EXECUTION RESULT</span>
                         <span>${escapeHtml(msg.name)}</span>
                     </div>
                     <div>${escapeHtml(msg.content)}</div>

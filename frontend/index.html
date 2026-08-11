@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Agent Assistant</title>
+    <title>AI Agent Console</title>
     <!-- Google Fonts: Inter & Fira Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,7 @@
             <div class="sidebar-header">
                 <button id="newChatBtn" class="btn-primary-gradient">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>New Conversation</span>
+                    <span>+ New Conversation</span>
                 </button>
                 <button id="sidebarCloseBtn" class="icon-btn mobile-only" aria-label="Close sidebar">✕</button>
             </div>
@@ -30,33 +30,6 @@
                 <span class="sidebar-section-title">Saved Conversations</span>
                 <div id="sessionList" class="session-list">
                     <!-- Dynamic session list -->
-                </div>
-            </div>
-
-            <!-- Capabilities Card -->
-            <div class="sidebar-card">
-                <div class="sidebar-card-title">Enabled Integrations</div>
-                <div class="tool-item">
-                    <span class="tool-icon">📊</span>
-                    <div class="tool-info">
-                        <strong>Calculator Tool</strong>
-                        <small>Mathematical computation engine</small>
-                    </div>
-                </div>
-                <div class="tool-item">
-                    <span class="tool-icon">📁</span>
-                    <div class="tool-info">
-                        <strong>Knowledge Base (RAG)</strong>
-                        <small>FAISS semantic search</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="sidebar-footer">
-                <div class="model-badge">
-                    <span class="pulse-dot"></span>
-                    <span>Backend Active (Qwen / Llama)</span>
                 </div>
             </div>
         </aside>
@@ -70,30 +43,7 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <div class="brand">
-                        <div class="brand-icon">💼</div>
-                        <div class="brand-text">
-                            <h1>AI Agent Console</h1>
-                            <p>LangGraph Agent Orchestration</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Execution Pipeline Breadcrumbs -->
-                <div id="flowPipeline" class="flow-pipeline">
-                    <div class="flow-step step-user active" id="stepUser">
-                        <span class="step-name">1. Input</span>
-                    </div>
-                    <div class="flow-connector" id="conn1"></div>
-                    <div class="flow-step step-agent" id="stepAgent">
-                        <span class="step-name">2. Agent</span>
-                    </div>
-                    <div class="flow-connector" id="conn2"></div>
-                    <div class="flow-step step-tool" id="stepTool">
-                        <span class="step-name">3. Tool</span>
-                    </div>
-                    <div class="flow-connector" id="conn3"></div>
-                    <div class="flow-step step-response" id="stepResponse">
-                        <span class="step-name">4. Output</span>
+                        <h1>AI Agent Console</h1>
                     </div>
                 </div>
 
