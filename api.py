@@ -1,6 +1,9 @@
+import os
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
@@ -17,6 +20,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static frontend directory
+frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
+if os.path.exists(frontend_dir):
+    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+
+@app.get("/")
+async def serve_frontend():
+    index_file = os.path.join(frontend_dir, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "AI Tool-Calling Agent API is running."}
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, Any]]
