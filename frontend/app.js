@@ -12,27 +12,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('sendBtn');
     const chips = document.querySelectorAll('.chip');
 
-    // Telemetry Steps (Optional)
-    const stepUser = document.getElementById('stepUser');
-    const stepAgent = document.getElementById('stepAgent');
-    const stepTool = document.getElementById('stepTool');
-    const stepResponse = document.getElementById('stepResponse');
-    const conn1 = document.getElementById('conn1');
-    const conn2 = document.getElementById('conn2');
-    const conn3 = document.getElementById('conn3');
+    // Memory / Thread display elements
+    const threadIdDisplay = document.getElementById('threadIdDisplay');
+    const threadCountEl = document.getElementById('threadCount');
+    const messageCountEl = document.getElementById('messageCount');
+    const memorySummaryText = document.getElementById('memorySummaryText');
+    const memorySummaryBadge = document.getElementById('memorySummaryBadge');
 
     // App State: LocalStorage Sessions Management
-    const STORAGE_KEY = 'ai_agent_sessions_v1';
+    const STORAGE_KEY = 'ai_agent_sessions_v2';
     let sessions = loadSessions();
-    let currentSessionId = sessions.length > 0 ? sessions[0].id : createNewSession();
+    let currentSessionId = sessions.length > 0 ? sessions[0].id : null;
+
+    // If no sessions exist, create one
+    if (!currentSessionId) {
+        currentSessionId = createNewSession();
+    }
 
     // Initialize App UI
     renderSessionList();
     loadCurrentSessionChat();
+    refreshThreadCount();
 
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
+    // UUID Generator
+    // -----------------------------------------------------------------
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // -----------------------------------------------------------------
     // Session Management Functions
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
     function loadSessions() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
@@ -60,14 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createNewSession() {
+        const threadId = generateUUID();
         const id = 'sess_' + Date.now();
         const newSession = {
             id,
+            thread_id: threadId,
             title: 'New Conversation',
             messages: [
                 {
                     role: 'assistant',
-                    content: "Hello! I'm your AI Agent Assistant. Ask me anything, or request a calculation / knowledge base lookup!"
+                    content: "Hello! I'm your AI Agent Assistant with persistent memory. I'll remember our conversation across messages. Ask me anything!"
                 }
             ]
         };
@@ -94,9 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     deleteSession(sess.id);
                 } else {
-                    currentSessionId = sess.id;
-                    renderSessionList();
-                    loadCurrentSessionChat();
+                    switchToSession(sess.id);
                 }
             });
 
@@ -104,7 +119,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function deleteSession(id) {
+    function switchToSession(sessionId) {
+        currentSessionId = sessionId;
+        renderSessionList();
+        loadCurrentSessionChat();
+    }
+
+    async function deleteSession(id) {
+        const session = sessions.find(s => s.id === id);
+
+        // Delete from server if thread exists
+        if (session && session.thread_id) {
+            try {
+                await fetch(`/threads/${session.thread_id}`, { method: 'DELETE' });
+            } catch (e) {
+                console.warn('Failed to delete server thread:', e);
+            }
+        }
+
         sessions = sessions.filter(s => s.id !== id);
         if (sessions.length === 0) {
             createNewSession();
@@ -116,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSessionList();
             loadCurrentSessionChat();
         }
+        refreshThreadCount();
     }
 
     function updateSessionTitle(firstQuery) {
@@ -127,58 +160,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function loadCurrentSessionChat() {
+    async function loadCurrentSessionChat() {
         chatContainer.innerHTML = '';
         const session = getCurrentSession();
+
+        // Update thread ID display
+        if (threadIdDisplay && session.thread_id) {
+            threadIdDisplay.textContent = session.thread_id.substring(0, 8) + '...';
+        }
+
+        // Try loading from server first
+        if (session.thread_id) {
+            try {
+                const response = await fetch(`/threads/${session.thread_id}/history`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.messages && data.messages.length > 0) {
+                        session.messages = data.messages;
+                        saveSessions();
+                        updateMemoryDisplay(data);
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not fetch server history, using local:', e);
+            }
+        }
+
+        // Render messages
         if (session && session.messages) {
             session.messages.forEach(msg => renderMessage(msg));
         }
-        resetTelemetryFlow();
+
+        updateMessageCount();
     }
 
-    // -------------------------------------------------------------
-    // Telemetry Pipeline Flow Controller (Safely handles missing elements)
-    // -------------------------------------------------------------
-    function resetTelemetryFlow() {
-        if (!stepUser) return;
-        stepUser.className = 'flow-step step-user active';
-        stepAgent.className = 'flow-step step-agent';
-        stepTool.className = 'flow-step step-tool';
-        stepResponse.className = 'flow-step step-response';
-        conn1.className = 'flow-connector';
-        conn2.className = 'flow-connector';
-        conn3.className = 'flow-connector';
-    }
-
-    function updateTelemetryFlow(phase) {
-        if (!stepUser) return;
-        resetTelemetryFlow();
-        if (phase === 'input') {
-            stepUser.classList.add('active');
-        } else if (phase === 'agent') {
-            stepUser.classList.add('active');
-            conn1.classList.add('active');
-            stepAgent.classList.add('active');
-        } else if (phase === 'tool') {
-            stepUser.classList.add('active');
-            conn1.classList.add('active');
-            stepAgent.classList.add('active');
-            conn2.classList.add('active');
-            stepTool.classList.add('active');
-        } else if (phase === 'response') {
-            stepUser.classList.add('active');
-            conn1.classList.add('active');
-            stepAgent.classList.add('active');
-            conn2.classList.add('active');
-            stepTool.classList.add('active');
-            conn3.classList.add('active');
-            stepResponse.classList.add('active');
+    function updateMemoryDisplay(data) {
+        if (messageCountEl) {
+            messageCountEl.textContent = data.message_count || data.messages?.length || 0;
+        }
+        if (memorySummaryText && data.summary) {
+            memorySummaryText.textContent = 'Summary active';
+            memorySummaryBadge.classList.add('active');
+        } else if (memorySummaryText) {
+            memorySummaryText.textContent = 'No summary';
+            memorySummaryBadge.classList.remove('active');
         }
     }
 
-    // -------------------------------------------------------------
+    function updateMessageCount() {
+        const session = getCurrentSession();
+        if (messageCountEl) {
+            const count = session.messages ? session.messages.filter(
+                m => m.role === 'user' || m.role === 'assistant'
+            ).length : 0;
+            messageCountEl.textContent = count;
+        }
+    }
+
+    async function refreshThreadCount() {
+        try {
+            const response = await fetch('/threads');
+            if (response.ok) {
+                const data = await response.json();
+                if (threadCountEl) {
+                    threadCountEl.textContent = data.count || 0;
+                }
+            }
+        } catch (e) {
+            if (threadCountEl) {
+                threadCountEl.textContent = sessions.length;
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------
     // Formatting & Rendering
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
     function scrollToBottom() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
@@ -284,9 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (indicator) indicator.remove();
     }
 
-    // -------------------------------------------------------------
-    // Chat Submission Logic
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
+    // Chat Submission Logic — Thread-Aware
+    // -----------------------------------------------------------------
     async function handleSend(queryText) {
         const text = queryText || userInput.value.trim();
         if (!text) return;
@@ -298,20 +355,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const session = getCurrentSession();
         updateSessionTitle(text);
 
-        // Add user message
+        // Add user message locally
         const userMsg = { role: 'user', content: text };
         session.messages.push(userMsg);
         saveSessions();
         renderMessage(userMsg);
 
-        updateTelemetryFlow('agent');
         showLoading();
 
         try {
+            // Send only the new message + thread_id to the server
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: session.messages })
+                body: JSON.stringify({
+                    message: text,
+                    thread_id: session.thread_id,
+                })
             });
 
             if (!response.ok) throw new Error(`Status ${response.status}`);
@@ -320,25 +380,24 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLoading();
 
             if (data.messages && data.messages.length > 0) {
+                // Store the thread_id returned by server (in case it was auto-generated)
+                if (data.thread_id) {
+                    session.thread_id = data.thread_id;
+                }
+
                 const prevCount = session.messages.length;
                 session.messages = data.messages;
                 saveSessions();
 
-                let executedTool = false;
+                // Render only new messages
                 for (let i = prevCount; i < session.messages.length; i++) {
-                    const m = session.messages[i];
-                    if (m.role === 'tool' || (m.tool_calls && m.tool_calls.length > 0)) {
-                        executedTool = true;
-                    }
-                    renderMessage(m);
+                    renderMessage(session.messages[i]);
                 }
 
-                if (executedTool) {
-                    updateTelemetryFlow('tool');
-                    setTimeout(() => updateTelemetryFlow('response'), 800);
-                } else {
-                    updateTelemetryFlow('response');
-                }
+                // Update memory display
+                updateMemoryDisplay(data);
+                updateMessageCount();
+                refreshThreadCount();
             }
         } catch (err) {
             hideLoading();
@@ -346,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 role: 'assistant',
                 content: `⚠️ Error connecting to server: ${err.message}`
             });
-            updateTelemetryFlow('input');
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;
@@ -366,9 +424,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
     // Event Listeners
-    // -------------------------------------------------------------
+    // -----------------------------------------------------------------
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         handleSend();
@@ -383,19 +441,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     newChatBtn.addEventListener('click', () => {
         createNewSession();
+        refreshThreadCount();
     });
 
-    clearChatBtn.addEventListener('click', () => {
+    clearChatBtn.addEventListener('click', async () => {
         const session = getCurrentSession();
         if (session) {
+            // Delete from server
+            if (session.thread_id) {
+                try {
+                    await fetch(`/threads/${session.thread_id}`, { method: 'DELETE' });
+                } catch (e) {
+                    console.warn('Failed to clear server thread:', e);
+                }
+            }
+
+            // Reset locally with a new thread_id
+            session.thread_id = generateUUID();
             session.messages = [
                 {
                     role: 'assistant',
-                    content: "Conversation reset! What would you like to explore next?"
+                    content: "Conversation reset! Memory has been cleared. What would you like to explore next?"
                 }
             ];
             saveSessions();
             loadCurrentSessionChat();
+            refreshThreadCount();
         }
     });
 

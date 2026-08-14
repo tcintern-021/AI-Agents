@@ -1,4 +1,4 @@
-/* Classic Professional Enterprise Theme */
+/* Classic Professional Enterprise Theme — with Memory UI */
 :root {
     --bg-main: #f8fafc;
     --bg-surface: #ffffff;
@@ -31,6 +31,10 @@
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-purple: #8b5cf6;
 }
 
 * {
@@ -169,7 +173,7 @@ body {
     opacity: 1;
 }
 
-/* Sidebar Tool Card */
+/* Sidebar Memory Status Card */
 .sidebar-card {
     background: #1e293b;
     border: 1px solid #334155;
@@ -177,7 +181,7 @@ body {
     padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .sidebar-card-title {
@@ -185,6 +189,35 @@ body {
     font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
+}
+
+.memory-status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.memory-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.memory-stat-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.memory-stat-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    font-family: 'Fira Code', monospace;
+}
+
+.memory-stat-value.status-active {
+    color: var(--accent-green);
+    font-size: 0.72rem;
 }
 
 .tool-item {
@@ -248,12 +281,21 @@ body {
     justify-content: space-between;
     background: var(--bg-surface);
     box-shadow: var(--shadow-sm);
+    gap: 12px;
 }
 
 .header-left {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.header-center {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
 }
 
 .icon-btn {
@@ -297,6 +339,58 @@ body {
 .brand-text p {
     font-size: 0.75rem;
     color: var(--text-muted);
+}
+
+/* Thread ID Badge */
+.thread-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-light);
+    border: 1px solid #bfdbfe;
+    color: var(--primary);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: 'Fira Code', monospace;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.thread-badge:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.thread-badge svg {
+    flex-shrink: 0;
+}
+
+/* Memory Summary Badge */
+.memory-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.memory-badge.active {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #059669;
+}
+
+.memory-badge svg {
+    flex-shrink: 0;
 }
 
 /* Classic Pipeline Stepper */
@@ -344,6 +438,7 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .btn-secondary:hover {
@@ -375,6 +470,18 @@ body {
     display: flex;
     flex-direction: column;
     max-width: 80%;
+    animation: messageSlideIn 0.3s ease-out;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .message-row.user { align-self: flex-end; }
@@ -596,4 +703,6 @@ body {
     }
     .mobile-only { display: flex; }
     .flow-pipeline { display: none; }
+    .header-center { display: none; }
+    .memory-status { font-size: 0.7rem; }
 }

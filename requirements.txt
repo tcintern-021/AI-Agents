@@ -1,5 +1,6 @@
 langchain>=0.2.0
 langgraph>=0.1.0
+langgraph-checkpoint-sqlite
 langchain-huggingface
 langchain-community
 langsmith
@@ -10,3 +11,4 @@ faiss-cpu
 tiktoken
 fastapi
 uvicorn
+aiosqlite

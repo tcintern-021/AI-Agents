@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Agent Console</title>
+    <title>AI Agent Console — Conversation Memory</title>
+    <meta name="description" content="LangGraph-powered AI agent with persistent conversation memory, multi-session support, and tool calling.">
     <!-- Google Fonts: Inter & Fira Code -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +33,25 @@
                     <!-- Dynamic session list -->
                 </div>
             </div>
+
+            <!-- Memory Status Card -->
+            <div class="sidebar-card">
+                <div class="sidebar-card-title">🧠 Memory Status</div>
+                <div class="memory-status">
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Active Threads</span>
+                        <span id="threadCount" class="memory-stat-value">0</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Current Messages</span>
+                        <span id="messageCount" class="memory-stat-value">0</span>
+                    </div>
+                    <div class="memory-stat">
+                        <span class="memory-stat-label">Persistence</span>
+                        <span class="memory-stat-value status-active">● SQLite</span>
+                    </div>
+                </div>
+            </div>
         </aside>
 
         <!-- Main Workspace -->
@@ -44,6 +64,22 @@
                     </button>
                     <div class="brand">
                         <h1>AI Agent Console</h1>
+                    </div>
+                </div>
+
+                <div class="header-center">
+                    <div id="threadBadge" class="thread-badge" title="Current conversation thread ID">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span id="threadIdDisplay">—</span>
+                    </div>
+                    <div id="memorySummaryBadge" class="memory-badge" title="Conversation has a stored summary">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 6v6l4 2"></path>
+                        </svg>
+                        <span id="memorySummaryText">No summary</span>
                     </div>
                 </div>
 
